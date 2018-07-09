@@ -1,0 +1,65 @@
+{
+    "attacks":
+    {
+        "0":
+        {
+            "name":"Strike",
+            "costs":5,
+            "description":"A strike.",
+            "icon":0,
+            "damage":5,
+            "isDot":0,
+			"Tier":1
+        },
+        "1":
+        {
+            "name":"Heavy Strike",
+            "costs":10,
+            "description":"A heavy strike.",
+            "icon":1,
+            "damage":10,
+            "isDot":0,
+			"Tier":2
+        },
+        "2":
+        {
+            "name":"Charge",
+            "costs":15,
+            "description":"A charge.",
+            "icon":2,
+            "damage":15,
+            "isDot":0,
+			"Tier":3
+        }
+    },
+    "defense":
+    {
+        "0":
+        {
+            "name":"Strike",
+            "costs":5,
+            "description":"A strike.",
+            "icon":0,
+            "damage":5,
+            "isDot":0
+        },
+        "1":
+        {
+            "name":"Heavy Strike",
+            "costs":10,
+            "description":"A heavy strike.",
+            "icon":0,
+            "damage":10,
+            "isDot":0
+        },
+        "2":
+        {
+            "name":"Charge",
+            "costs":15,
+            "description":"A charge.",
+            "icon":0,
+            "damage":15,
+            "isDot":0
+        }
+    }
+}
