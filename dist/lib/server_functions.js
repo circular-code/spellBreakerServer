@@ -8,12 +8,6 @@ var pool = db.createPool({
     user: "mcdev",
     password: "devtron666"
 });
-/*var connection = db.createConnection({
-    host: 'h2778219.stratoserver.net:3306',
-    database: 'dev',
-    username: 'devinator',
-    password: 'devtron12000'
-});*/
 function userLogin(socket, activeUsers) {
     socket.on('user:login', function (data) {
         console.log(data);
@@ -45,10 +39,12 @@ function userLogin(socket, activeUsers) {
                     //console.log(activeUsers)
                     Object.keys(rows).forEach(function (key) {
                         if (rows[key]['password'] == data['password']) {
-                            if (!checkIfUserLoggedIn(activeUsers, rows[key]['id'])) {
+                            let user = new Models.User(data['username'], rows[key]['id'], socket.id);
+                            if (!checkIfUserLoggedIn(activeUsers, user)) {
                                 console.log("password correct");
                                 socket.emit('user:login', { data: rows[key]['id'] });
-                                activeUsers.set(socket.id, new Models.User(data['username'], rows[key]['id'], socket.id));
+                                //activeUsers.add(socket.id, new Models.User(data['username'], rows[key]['id'], socket.id));
+                                activeUsers.add(socket.id, new Models.User(data['username'], rows[key]['id'], socket.id));
                                 data = null;
                                 return;
                             }
@@ -73,10 +69,14 @@ function userLogin(socket, activeUsers) {
     });
 }
 exports.userLogin = userLogin;
-function checkIfUserLoggedIn(activeUsers, id) {
-    if (activeUsers.size > 0) {
-        let arr = Array.from(activeUsers.values());
-        return arr.some(x => x['id'] === id);
+function checkIfUserLoggedIn(activeUsers, user) {
+    console.log("checkIfUserLoggedIn + id: ");
+    if (activeUsers.count() > 0) {
+        let tmpActiveUsers = activeUsers.values();
+        return tmpActiveUsers.some(x => x.getId() == user.getId());
+        //let arr = Array.from(activeUsers.values());
+        //return arr.some(x => x['id'] === id);
+        //return activeUsers.hasValue(user);
     }
     else {
         return false;
@@ -108,29 +108,69 @@ function registerUserForMatchMaking(socket, lfmClients) {
     });
 }
 exports.registerUserForMatchMaking = registerUserForMatchMaking;
-function validateSpell(socket, data, match, io) {
-    /*console.log(data);
-    console.log(data['gestureData']);
-    console.log(data['gestureData']['lines']);
-    console.log(data['gestureData']['lines'].length);*/
-    data['gestureData']['lines'].forEach(element => {
-        console.log(element);
-    });
+/*
+*	=> später aufteilen in kleinere funktionen
+*
+*
+*/
+function validateSpell(socket, data, match, io, callback) {
     var defendingPlayer = match.getPlayers().find(function (element) {
         return element['socket_id'] != socket.id;
     });
     var castingPlayer = match.getPlayers().find(function (element) {
         return element['socket_id'] == socket.id;
     });
-    console.log(match);
-    console.log(match.getPlayers());
-    console.log(defendingPlayer);
-    defendingPlayer.setHealth(defendingPlayer.getHealth() - 10);
-    io.sockets.sockets[castingPlayer.getID()].emit('spell:result', { success: true, result: defendingPlayer });
-    io.sockets.sockets[defendingPlayer.getID()].emit('spell:result', { success: true, result: defendingPlayer });
+    let timeout = setTimeout(function () {
+        // timeout für verteidigenden spieler um zu reagieren
+        console.log("attack not blocked");
+        defendingPlayer.setHealth(defendingPlayer.getHealth() - 10);
+        if (io.sockets.sockets[castingPlayer.getID()] != null) {
+            io.sockets.sockets[castingPlayer.getID()].emit('spell:result', { success: true, defenderId: defendingPlayer.getID(), defenderHealth: defendingPlayer.getHealth() });
+        }
+        if (io.sockets.sockets[defendingPlayer.getID()] != null) {
+            io.sockets.sockets[defendingPlayer.getID()].emit('spell:result', { success: true, defenderId: defendingPlayer.getID(), defenderHealth: defendingPlayer.getHealth() });
+        }
+        if (defendingPlayer.getHealth() <= 0) {
+            console.log("end match");
+            match.setInProgress(false);
+            if (match) {
+                if (io.sockets.sockets[castingPlayer.getID()] != null) {
+                    io.sockets.sockets[castingPlayer.getID()].emit('endMatch', { data: null });
+                }
+                if (io.sockets.sockets[defendingPlayer.getID()] != null) {
+                    io.sockets.sockets[defendingPlayer.getID()].emit('endMatch', { data: null });
+                }
+            }
+            callback(match);
+        }
+        defendingPlayer.deleteFirstPendingSpell();
+    }, 5000);
+    if (io.sockets.sockets[defendingPlayer.getID()] != null) {
+        io.sockets.sockets[defendingPlayer.getID()].emit('spell:pending', { data: "" });
+        defendingPlayer.addPendingSpell(timeout);
+    }
 }
 exports.validateSpell = validateSpell;
-function endMatch(socket, matches, io, data, winner) {
+function defendSpell(socket, data, match, io) {
+    console.log("defend spell");
+    let player = match.getPlayers().find(x => x['socket_id'] == socket.id);
+    console.log(player);
+    if (player.getPendingSpells().length > 0) {
+        player.deleteFirstPendingSpell();
+        if (io.sockets.sockets[player.getID()] != null) {
+            console.log("emit spell blocked");
+            io.sockets.sockets[player.getID()].emit('spell:blocked', { data: "" });
+        }
+    }
+}
+exports.defendSpell = defendSpell;
+function endMatch(socket, match, io) {
+    console.log("end match");
+    match.getPlayers().forEach(element => {
+        if (io.sockets.sockets[element.getID()] != null) {
+            io.sockets.sockets[element.getID()].emit('endMatch', { data: "End Match Data" });
+        }
+    });
 }
 exports.endMatch = endMatch;
 function moveUsersToMatchRoom(matches, lfmClients, io) {
@@ -149,12 +189,18 @@ function moveUsersToMatchRoom(matches, lfmClients, io) {
             while (match == undefined || match == null) {
                 match = this.createRoom(players, matches);
             }
-            io.sockets.sockets[player1.getID()].join(match.id, () => {
-                io.sockets.sockets[player1.getID()].emit('match:joined', { data: match.getId(), startPlayerID: match.playerDraw, thisPlayerID: player1, opponentPlayer: player2 });
-            });
-            io.sockets.sockets[player2.getID()].join(match.id, () => {
-                io.sockets.sockets[player2.getID()].emit('match:joined', { data: match.getId(), startPlayerID: match.playerDraw, thisPlayerID: player2, opponentPlayer: player1 });
-            });
+            if (io.sockets.sockets[player1.getID()] != null) {
+                io.sockets.sockets[player1.getID()].join(match.id, () => {
+                    console.log("joined player 1");
+                    io.sockets.sockets[player1.getID()].emit('match:joined', { data: match.getId(), startPlayerID: match.playerDraw, thisPlayerID: player1, opponentPlayer: player2 });
+                });
+            }
+            if (io.sockets.sockets[player2.getID()] != null) {
+                io.sockets.sockets[player2.getID()].join(match.id, () => {
+                    console.log("joined player 2");
+                    io.sockets.sockets[player2.getID()].emit('match:joined', { data: match.getId(), startPlayerID: match.playerDraw, thisPlayerID: player2, opponentPlayer: player1 });
+                });
+            }
         }
     }
 }
@@ -162,8 +208,9 @@ exports.moveUsersToMatchRoom = moveUsersToMatchRoom;
 function createRoom(players, matches) {
     var tempPlayer = Math.floor(players.length * Math.random());
     var match = new Models.Match((Math.random() + 1).toString(36).substring(8), players, players[tempPlayer].getID());
-    if (matches[match.getId()] == null) {
-        matches[match.getId()] = match;
+    if (!matches.containsKey(match.getId())) {
+        matches.add(match.getId(), match);
+        //matches[match.getId()] = match;       
         return match;
     }
     else {
