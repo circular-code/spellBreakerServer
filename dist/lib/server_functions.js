@@ -8,7 +8,7 @@ var pool = db.createPool({
     user: "mcdev",
     password: "devtron666"
 });
-function userLogin(socket, activeUsers) {
+function userLogin(socket, activeUsers, io) {
     socket.on('user:login', function (data) {
         console.log(data);
         pool.getConnection(function (err, connection) {
@@ -20,12 +20,12 @@ function userLogin(socket, activeUsers) {
                 return;
             }
             else {
+                //get user query
                 connection.query("SELECT * FROM users WHERE username = '" + data['username'] + "'", function (err, rows) {
                     if (err) {
                         console.log(err);
                         socket.emit('connection:error', { data: 'database' });
                         connection.release();
-                        data = null;
                         return;
                     }
                     // And done with the connection.
@@ -33,32 +33,31 @@ function userLogin(socket, activeUsers) {
                         socket.emit('user:login:notfound', { data: 'no user' });
                         console.log("User not found.");
                         connection.release();
-                        data = null;
                         return;
                     }
-                    //console.log(activeUsers)
+                    //loop through sql result
                     Object.keys(rows).forEach(function (key) {
                         if (rows[key]['password'] == data['password']) {
+                            //create user object
                             let user = new Models.User(data['username'], rows[key]['id'], socket.id);
                             if (!checkIfUserLoggedIn(activeUsers, user)) {
                                 console.log("password correct");
                                 socket.emit('user:login', { data: rows[key]['id'] });
                                 //activeUsers.add(socket.id, new Models.User(data['username'], rows[key]['id'], socket.id));
+                                console.log(activeUsers);
                                 activeUsers.add(socket.id, new Models.User(data['username'], rows[key]['id'], socket.id));
-                                data = null;
+                                console.log(activeUsers);
                                 return;
                             }
                             else {
                                 console.log("user already logged in");
                                 socket.emit('user:alreadyLoggedIn', { data: 'already logged in' });
-                                data = null;
                                 return;
                             }
                         }
                         else {
                             console.log("wrong password.");
                             socket.emit('user:login', { data: 'bad pass' });
-                            data = null;
                             return;
                         }
                     });
@@ -69,20 +68,17 @@ function userLogin(socket, activeUsers) {
     });
 }
 exports.userLogin = userLogin;
+//return false is user is not logged in
 function checkIfUserLoggedIn(activeUsers, user) {
-    console.log("checkIfUserLoggedIn + id: ");
     if (activeUsers.count() > 0) {
-        let tmpActiveUsers = activeUsers.values();
-        return tmpActiveUsers.some(x => x.getId() == user.getId());
-        //let arr = Array.from(activeUsers.values());
-        //return arr.some(x => x['id'] === id);
-        //return activeUsers.hasValue(user);
+        return activeUsers.hasJsonValue(user, "id");
     }
     else {
         return false;
     }
 }
 exports.checkIfUserLoggedIn = checkIfUserLoggedIn;
+//add user to registered lfm clients
 function registerUserForMatchMaking(socket, lfmClients) {
     socket.on('register:for:match', function (data) {
         if (lfmClients == null || socket.id in lfmClients == false) {
@@ -104,7 +100,6 @@ function registerUserForMatchMaking(socket, lfmClients) {
                 }
             });
         }
-        //console.log(data); 
     });
 }
 exports.registerUserForMatchMaking = registerUserForMatchMaking;
@@ -120,35 +115,24 @@ function validateSpell(socket, data, match, io, callback) {
     var castingPlayer = match.getPlayers().find(function (element) {
         return element['socket_id'] == socket.id;
     });
+    //damage timeout
     let timeout = setTimeout(function () {
         // timeout für verteidigenden spieler um zu reagieren
         console.log("attack not blocked");
         defendingPlayer.setHealth(defendingPlayer.getHealth() - 10);
-        if (io.sockets.sockets[castingPlayer.getID()] != null) {
-            io.sockets.sockets[castingPlayer.getID()].emit('spell:result', { success: true, defenderId: defendingPlayer.getID(), defenderHealth: defendingPlayer.getHealth() });
-        }
-        if (io.sockets.sockets[defendingPlayer.getID()] != null) {
-            io.sockets.sockets[defendingPlayer.getID()].emit('spell:result', { success: true, defenderId: defendingPlayer.getID(), defenderHealth: defendingPlayer.getHealth() });
-        }
+        console.log("healt: " + defendingPlayer.getHealth());
+        io.sockets.sockets[castingPlayer.getID()].emit('spell:result', { success: true, result: { id: defendingPlayer.getID(), health: defendingPlayer.getHealth() } });
+        io.sockets.sockets[defendingPlayer.getID()].emit('spell:result', { success: true, result: { id: defendingPlayer.getID(), health: defendingPlayer.getHealth() } });
         if (defendingPlayer.getHealth() <= 0) {
             console.log("end match");
             match.setInProgress(false);
-            if (match) {
-                if (io.sockets.sockets[castingPlayer.getID()] != null) {
-                    io.sockets.sockets[castingPlayer.getID()].emit('endMatch', { data: null });
-                }
-                if (io.sockets.sockets[defendingPlayer.getID()] != null) {
-                    io.sockets.sockets[defendingPlayer.getID()].emit('endMatch', { data: null });
-                }
-            }
+            io.sockets.sockets[castingPlayer.getID()].emit('endMatch');
+            io.sockets.sockets[defendingPlayer.getID()].emit('endMatch');
             callback(match);
         }
-        defendingPlayer.deleteFirstPendingSpell();
     }, 5000);
-    if (io.sockets.sockets[defendingPlayer.getID()] != null) {
-        io.sockets.sockets[defendingPlayer.getID()].emit('spell:pending', { data: "" });
-        defendingPlayer.addPendingSpell(timeout);
-    }
+    io.sockets.sockets[defendingPlayer.getID()].emit('spell:pending', { data: "" });
+    defendingPlayer.addPendingSpell(timeout);
 }
 exports.validateSpell = validateSpell;
 function defendSpell(socket, data, match, io) {
@@ -157,60 +141,52 @@ function defendSpell(socket, data, match, io) {
     console.log(player);
     if (player.getPendingSpells().length > 0) {
         player.deleteFirstPendingSpell();
-        if (io.sockets.sockets[player.getID()] != null) {
-            console.log("emit spell blocked");
-            io.sockets.sockets[player.getID()].emit('spell:blocked', { data: "" });
-        }
     }
 }
 exports.defendSpell = defendSpell;
 function endMatch(socket, match, io) {
     console.log("end match");
     match.getPlayers().forEach(element => {
-        if (io.sockets.sockets[element.getID()] != null) {
-            io.sockets.sockets[element.getID()].emit('endMatch', { data: "End Match Data" });
-        }
+        io.sockets.sockets[element.getID()].emit('endMatch', { data: "End Match Data" });
     });
 }
 exports.endMatch = endMatch;
 function moveUsersToMatchRoom(matches, lfmClients, io) {
     if (Object.keys(lfmClients).length > 1) {
+        //get player1 data and create player1 object
         var keys = Object.keys(lfmClients);
         var tempPlayer = keys[Math.floor(keys.length * Math.random())];
         var player1 = new Models.Player(lfmClients[tempPlayer], 100);
         delete (lfmClients[tempPlayer]);
+        //get player2 data and create player2 object
         keys = Object.keys(lfmClients);
         tempPlayer = keys[Math.floor(keys.length * Math.random())];
         var player2 = new Models.Player(lfmClients[tempPlayer], 100);
         delete (lfmClients[tempPlayer]);
         if (player2 != undefined && player1 != undefined) {
             var players = [player1, player2];
+            //create a new match
             var match = this.createRoom(players, matches);
             while (match == undefined || match == null) {
                 match = this.createRoom(players, matches);
             }
-            if (io.sockets.sockets[player1.getID()] != null) {
-                io.sockets.sockets[player1.getID()].join(match.id, () => {
-                    console.log("joined player 1");
-                    io.sockets.sockets[player1.getID()].emit('match:joined', { data: match.getId(), startPlayerID: match.playerDraw, thisPlayerID: player1, opponentPlayer: player2 });
-                });
-            }
-            if (io.sockets.sockets[player2.getID()] != null) {
-                io.sockets.sockets[player2.getID()].join(match.id, () => {
-                    console.log("joined player 2");
-                    io.sockets.sockets[player2.getID()].emit('match:joined', { data: match.getId(), startPlayerID: match.playerDraw, thisPlayerID: player2, opponentPlayer: player1 });
-                });
-            }
+            //emit to players
+            io.sockets.sockets[player1.getID()].join(match.id, () => {
+                io.sockets.sockets[player1.getID()].emit('match:joined', { data: match.getId(), startPlayerID: match.playerDraw, thisPlayerID: player1, opponentPlayer: player2 });
+            });
+            io.sockets.sockets[player2.getID()].join(match.id, () => {
+                io.sockets.sockets[player2.getID()].emit('match:joined', { data: match.getId(), startPlayerID: match.playerDraw, thisPlayerID: player2, opponentPlayer: player1 });
+            });
         }
     }
 }
 exports.moveUsersToMatchRoom = moveUsersToMatchRoom;
+//creates and returns a new match; returns null if match with same id already exists
 function createRoom(players, matches) {
     var tempPlayer = Math.floor(players.length * Math.random());
     var match = new Models.Match((Math.random() + 1).toString(36).substring(8), players, players[tempPlayer].getID());
     if (!matches.containsKey(match.getId())) {
         matches.add(match.getId(), match);
-        //matches[match.getId()] = match;       
         return match;
     }
     else {

@@ -6,6 +6,7 @@ const SocketIO = require("socket.io");
 const db = require("mysql");
 const ServerMethods = require("./lib/server_functions");
 const collections_1 = require("./lib/collections");
+var fs = require('fs');
 var pool = db.createPool({
     host: 'localhost',
     database: 'spellbreaker',
@@ -26,7 +27,6 @@ class AppServer {
         this.sockets();
         this.listen();
         setInterval(() => ServerMethods.moveUsersToMatchRoom(matches, lfmClients, this.io), 1000);
-        //setInterval(() => console.log(matches), 500);
         //this.activeUsers = {};
         /*this.activeUsers = new Models.User("name", 0, "socket");
         console.log(this.activeUsers);
@@ -41,54 +41,61 @@ class AppServer {
     config() {
         this.port = process.env.PORT || AppServer.PORT;
     }
+    //error logger
+    errorLogging() {
+        process.on('uncaughtException', function (err) {
+            console.log("throw log");
+            let date = new Date().toISOString().replace(/T.+/, '');
+            if (!fs.existsSync('logs/errLog-' + date)) {
+                fs.writeFile('logs/errLog-' + date, err.message + err.stack + "\n\n=================\n\n", function (err) {
+                    if (err)
+                        throw err;
+                    console.log("crashlog created");
+                    process.exit();
+                });
+            }
+            else {
+                fs.appendFile('logs/errLog-' + date, err.message + err.stack + "\n\n=================\n\n", function (err) {
+                    if (err)
+                        throw err;
+                    console.log("crashlog updated");
+                    process.exit();
+                });
+            }
+        });
+    }
     sockets() {
         this.io = SocketIO(this.server);
     }
     listen() {
+        //register errorLogger
+        this.errorLogging();
         this.server.listen(this.port, () => {
             console.log('Running spellbreaker server on port %s', this.port);
         });
         var io = this.io;
         var appServer = this;
         this.io.on('connection', function (socket) {
-            //console.log(socket);
-            //console.log(io.nsps);
-            //console.log(socket.nsp.name);
-            /*socket.on('beep', function(){
-                socket.emit('boop');
-            });
-
-            /*socket.on('user:login', function(data){
-                activeUsers.push(data['user_id']);
-            });*/
-            ServerMethods.userLogin(socket, activeUsers);
+            ServerMethods.userLogin(socket, activeUsers, io);
             ServerMethods.registerUserForMatchMaking(socket, lfmClients);
-            //ServerMethods.useSpell(socket, matches, io);
             socket.on('player:cast:spell', (data) => {
-                console.log("player casted spell");
-                console.log(matches);
+                //check if match is registered
                 if (matches.containsKey(data['match_id'])) {
-                    //var tmpMatches = new Map(matches);
+                    //get match			
                     var match = matches.getValue(data['match_id']);
-                    //matches.set(match.getId(), match);					
                     ServerMethods.validateSpell(socket, data, match, io, appServer.endMatch);
-                    //matches.add(match.getId(), match);
                 }
             });
             socket.on('player:defend:spell', (data) => {
-                console.log("player:defend:spell");
+                //check if match is registered
                 if (matches.containsKey(data['match_id'])) {
-                    //var tmpMatches = new Map(matches);
-                    //console.log(tmpMatches);
+                    //get match
                     var match = matches.getValue(data['match_id']);
-                    //matches.set(match.getId(), match);
                     ServerMethods.defendSpell(socket, data, match, io);
-                    //matches.add(match.getId(), match);
                 }
             });
             socket.on('disconnect', (reason) => {
                 if (activeUsers != null) {
-                    console.log(activeUsers);
                     //activeUsers.delete(socket.id);
                     activeUsers.remove(socket.id);
                 }
@@ -96,16 +103,13 @@ class AppServer {
                     delete (lfmClients[socket.id]);
                 }
                 if (matches != null) {
-                    /*let arr = Array.from(matches.values());
-
-                    for(var i = 0; i < arr.length; i++)
-                    {
-                        if(arr[i].checkForSocketId(socket.id))
-                        {
-                            matches.delete(arr[i].getId());
+                    let arr = Array.from(matches.values());
+                    for (var i = 0; i < arr.length; i++) {
+                        if (arr[i].checkForSocketId(socket.id)) {
+                            matches.remove(matches.keys()[i]);
                             break;
                         }
-                    }*/
+                    }
                     /*for(var i = 0; i < matches._keys.length; i++)
                     {
                         let match = matches[matches._keys[i]];
