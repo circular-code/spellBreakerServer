@@ -1,0 +1,42 @@
+Cannot read property 'emit' of undefinedTypeError: Cannot read property 'emit' of undefined
+    at /var/www/vhosts/h2778219.stratoserver.net/spellbreaker/dist/lib/server_functions.js:45:59
+    at Array.forEach (native)
+    at Query._callback (/var/www/vhosts/h2778219.stratoserver.net/spellbreaker/dist/lib/server_functions.js:40:39)
+    at Query.Sequence.end (/var/www/vhosts/h2778219.stratoserver.net/spellbreaker/node_modules/mysql/lib/protocol/sequences/Sequence.js:88:24)
+    at Query._handleFinalResultPacket (/var/www/vhosts/h2778219.stratoserver.net/spellbreaker/node_modules/mysql/lib/protocol/sequences/Query.js:139:8)
+    at Query.EofPacket (/var/www/vhosts/h2778219.stratoserver.net/spellbreaker/node_modules/mysql/lib/protocol/sequences/Query.js:123:8)
+    at Protocol._parsePacket (/var/www/vhosts/h2778219.stratoserver.net/spellbreaker/node_modules/mysql/lib/protocol/Protocol.js:279:23)
+    at Parser.write (/var/www/vhosts/h2778219.stratoserver.net/spellbreaker/node_modules/mysql/lib/protocol/Parser.js:76:12)
+    at Protocol.write (/var/www/vhosts/h2778219.stratoserver.net/spellbreaker/node_modules/mysql/lib/protocol/Protocol.js:39:16)
+    at Socket.<anonymous> (/var/www/vhosts/h2778219.stratoserver.net/spellbreaker/node_modules/mysql/lib/Connection.js:103:28)
+
+=================
+
+Cannot read property 'emit' of undefinedTypeError: Cannot read property 'emit' of undefined
+    at /var/www/vhosts/h2778219.stratoserver.net/spellbreaker/dist/lib/server_functions.js:45:59
+    at Array.forEach (native)
+    at Query._callback (/var/www/vhosts/h2778219.stratoserver.net/spellbreaker/dist/lib/server_functions.js:40:39)
+    at Query.Sequence.end (/var/www/vhosts/h2778219.stratoserver.net/spellbreaker/node_modules/mysql/lib/protocol/sequences/Sequence.js:88:24)
+    at Query._handleFinalResultPacket (/var/www/vhosts/h2778219.stratoserver.net/spellbreaker/node_modules/mysql/lib/protocol/sequences/Query.js:139:8)
+    at Query.EofPacket (/var/www/vhosts/h2778219.stratoserver.net/spellbreaker/node_modules/mysql/lib/protocol/sequences/Query.js:123:8)
+    at Protocol._parsePacket (/var/www/vhosts/h2778219.stratoserver.net/spellbreaker/node_modules/mysql/lib/protocol/Protocol.js:279:23)
+    at Parser.write (/var/www/vhosts/h2778219.stratoserver.net/spellbreaker/node_modules/mysql/lib/protocol/Parser.js:76:12)
+    at Protocol.write (/var/www/vhosts/h2778219.stratoserver.net/spellbreaker/node_modules/mysql/lib/protocol/Protocol.js:39:16)
+    at Socket.<anonymous> (/var/www/vhosts/h2778219.stratoserver.net/spellbreaker/node_modules/mysql/lib/Connection.js:103:28)
+
+=================
+
+Cannot read property 'emit' of undefinedTypeError: Cannot read property 'emit' of undefined
+    at /var/www/vhosts/h2778219.stratoserver.net/spellbreaker/dist/lib/server_functions.js:45:59
+    at Array.forEach (native)
+    at Query._callback (/var/www/vhosts/h2778219.stratoserver.net/spellbreaker/dist/lib/server_functions.js:40:39)
+    at Query.Sequence.end (/var/www/vhosts/h2778219.stratoserver.net/spellbreaker/node_modules/mysql/lib/protocol/sequences/Sequence.js:88:24)
+    at Query._handleFinalResultPacket (/var/www/vhosts/h2778219.stratoserver.net/spellbreaker/node_modules/mysql/lib/protocol/sequences/Query.js:139:8)
+    at Query.EofPacket (/var/www/vhosts/h2778219.stratoserver.net/spellbreaker/node_modules/mysql/lib/protocol/sequences/Query.js:123:8)
+    at Protocol._parsePacket (/var/www/vhosts/h2778219.stratoserver.net/spellbreaker/node_modules/mysql/lib/protocol/Protocol.js:279:23)
+    at Parser.write (/var/www/vhosts/h2778219.stratoserver.net/spellbreaker/node_modules/mysql/lib/protocol/Parser.js:76:12)
+    at Protocol.write (/var/www/vhosts/h2778219.stratoserver.net/spellbreaker/node_modules/mysql/lib/protocol/Protocol.js:39:16)
+    at Socket.<anonymous> (/var/www/vhosts/h2778219.stratoserver.net/spellbreaker/node_modules/mysql/lib/Connection.js:103:28)
+
+=================
+

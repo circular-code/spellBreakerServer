@@ -1,0 +1,11 @@
+Cannot read property 'emit' of undefinedTypeError: Cannot read property 'emit' of undefined
+    at Object.defendSpell (/var/www/vhosts/h2778219.stratoserver.net/spellbreaker/dist/lib/server_functions.js:144:26)
+    at Socket.<anonymous> (/var/www/vhosts/h2778219.stratoserver.net/spellbreaker/dist/server.js:94:35)
+    at emitOne (events.js:77:13)
+    at Socket.emit (events.js:169:7)
+    at /var/www/vhosts/h2778219.stratoserver.net/spellbreaker/node_modules/socket.io/lib/socket.js:527:12
+    at nextTickCallbackWith0Args (node.js:419:9)
+    at process._tickCallback (node.js:348:13)
+
+=================
+
