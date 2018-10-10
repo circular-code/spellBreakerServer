@@ -123,7 +123,7 @@ class Player {
         clearTimeout(timeOut);
     }
     deletePendingSpell(_id) {
-        this.pendingSpells.splice(this.pendingSpells.indexOf(_id));
+        this.pendingSpells.splice(this.pendingSpells.indexOf(_id), -1);
     }
     getPendingSpells() {
         return this.pendingSpells;

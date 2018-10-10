@@ -21,31 +21,32 @@ function userLogin(socket, activeUsers, io) {
             }
             else {
                 //get user query
-                connection.query("SELECT * FROM users WHERE username = '" + data['username'] + "'", function (err, rows) {
+                let sql = 'CALL GetUser(?)';
+                connection.query(sql, data['username'], function (err, rows) {
                     if (err) {
                         console.log(err);
                         socket.emit('connection:error', { data: 'database' });
                         connection.release();
                         return;
                     }
-                    // And done with the connection.
-                    if (rows.length == 0) {
+                    let resultData = rows[0];
+                    if (resultData.length == 0) {
                         socket.emit('user:login:notfound', { data: 'no user' });
                         console.log("User not found.");
                         connection.release();
                         return;
                     }
                     //loop through sql result
-                    Object.keys(rows).forEach(function (key) {
-                        if (rows[key]['password'] == data['password']) {
+                    Object.keys(resultData).forEach(function (key) {
+                        if (resultData[key]['password'] == data['password']) {
                             //create user object
-                            let user = new Models.User(data['username'], rows[key]['id'], socket.id);
+                            let user = new Models.User(data['username'], resultData[key]['id'], socket.id);
                             if (!checkIfUserLoggedIn(activeUsers, user)) {
                                 console.log("password correct");
-                                socket.emit('user:login', { data: rows[key]['id'] });
+                                socket.emit('user:login', { data: resultData[key]['id'] });
                                 //activeUsers.add(socket.id, new Models.User(data['username'], rows[key]['id'], socket.id));
                                 console.log(activeUsers);
-                                activeUsers.add(socket.id, new Models.User(data['username'], rows[key]['id'], socket.id));
+                                activeUsers.add(socket.id, new Models.User(data['username'], resultData[key]['id'], socket.id));
                                 console.log(activeUsers);
                                 return;
                             }
@@ -141,6 +142,7 @@ function defendSpell(socket, data, match, io) {
     console.log(player);
     if (player.getPendingSpells().length > 0) {
         player.deleteFirstPendingSpell();
+        socket.emit('spell:blocked', { data: "" });
     }
 }
 exports.defendSpell = defendSpell;

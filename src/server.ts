@@ -59,22 +59,21 @@ export class AppServer {
 	//error logger
     private errorLogging(): void {
         process.on('uncaughtException', function(err) {
-            console.log("throw log");
+            console.log(err);
             let date = new Date().toISOString().replace(/T.+/, '');
             if(!fs.existsSync('logs/errLog-' + date))
             {
                 fs.writeFile('logs/errLog-' + date, err.message + err.stack + "\n\n=================\n\n", function(err){
                     if (err) throw err;
                     console.log("crashlog created");
-                    process.exit();
                 });
             } else {
                 fs.appendFile('logs/errLog-' + date, err.message + err.stack + "\n\n=================\n\n", function(err){
                     if (err) throw err;
                     console.log("crashlog updated");
-                    process.exit();
                 });
-            }
+			}
+			process.exit();
         });
     }
 
@@ -95,7 +94,7 @@ export class AppServer {
 		var appServer: AppServer = this;
 
         this.io.on('connection', function(socket: SocketIO.Socket){
-            
+            console.log("new socket connected");
             ServerMethods.userLogin(socket, activeUsers, io);
 
             ServerMethods.registerUserForMatchMaking(socket, lfmClients);	
@@ -140,6 +139,14 @@ export class AppServer {
                     {
                         if(arr[i].checkForSocketId(socket.id))
                         {
+                            var match = matches.getValue(matches.keys()[i]);
+
+                            match.getPlayers().forEach(element => {
+                                if(element.getID() != socket.id)
+                                {
+                                    io.sockets.sockets[element.getID()].emit('endMatch', { data: "End Match Data" });
+                                }
+                            });
                             matches.remove(matches.keys()[i]);
                             break;
                         }

@@ -1,11 +1,15 @@
 //import {Serializable, Serialize, SerializeOpt, SerializeArray} from "ts-serialize";
 
 export class User {
-    constructor(private name: string, private id: number, private socket_id: string) { }
+    constructor(private name: string, private id: number, private socket_id: string, private challenge_id: string) { }
 
     getId(): number{
         return this.id;
-    }
+	}
+	
+	getChallengeId(): string{
+		return this.challenge_id;
+	}
 }
 
 export interface activeUser {
@@ -167,7 +171,7 @@ export class Player {
 
 	deletePendingSpell(_id: any)
 	{
-		this.pendingSpells.splice(this.pendingSpells.indexOf(_id));
+		this.pendingSpells.splice(this.pendingSpells.indexOf(_id), -1);
 	}
 
 	getPendingSpells(): any

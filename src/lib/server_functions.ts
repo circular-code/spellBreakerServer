@@ -25,36 +25,38 @@ export function userLogin(socket, activeUsers: Collections.Dictionary<string, Mo
                 return;
             } else {
 				//get user query
-                connection.query("SELECT * FROM users WHERE username = '" + data['username'] + "'", function(err, rows) {
+				let sql = 'CALL GetUser(?)';
+                connection.query(sql, data['username'], function(err, rows) {
                     if(err) {
                         console.log(err);
                         socket.emit('connection:error', { data: 'database' } );
                         connection.release();
                         return;
                     }
-                    // And done with the connection.
-                    if(rows.length == 0) {
+										
+					let resultUserData = rows[0];
+					if(resultUserData.length == 0) {
                         socket.emit('user:login:notfound', { data: 'no user' } );
                         console.log("User not found.");
                         connection.release();
                         return;
-                    }
+					}
 
 					//loop through sql result
-                    Object.keys(rows).forEach(function(key){
-                        if(rows[key]['password'] == data['password']) {
+                    Object.keys(resultUserData).forEach(function(key){
+                        if(resultUserData[key]['password'] == data['password']) {
 
 							//create user object
-							let user = new Models.User(data['username'], rows[key]['id'], socket.id);
+							let user = new Models.User(data['username'], resultUserData[key]['id'], socket.id, resultUserData[key]['challengeId']);
 
                             if(!checkIfUserLoggedIn(activeUsers, user))
                             {
                                 console.log("password correct");
-                                socket.emit('user:login', { data: rows[key]['id'] } );
+                                socket.emit('user:login', { data: resultUserData[key]['id'] } );
 
                                 //activeUsers.add(socket.id, new Models.User(data['username'], rows[key]['id'], socket.id));
                                 console.log(activeUsers);
-								activeUsers.add(socket.id, new Models.User(data['username'], rows[key]['id'], socket.id));
+								activeUsers.add(socket.id, new Models.User(data['username'], resultUserData[key]['id'], socket.id, resultUserData[key]['challengeId']));
 								console.log(activeUsers);
                                 return;
                             } else {
@@ -143,9 +145,9 @@ export function validateSpell(socket, data, match, io, callback)
         {
 			console.log("end match");
 			match.setInProgress(false);	
-			io.sockets.sockets[castingPlayer.getID()].emit('endMatch');
-        	io.sockets.sockets[defendingPlayer.getID()].emit('endMatch');
-            callback(match);
+			//io.sockets.sockets[castingPlayer.getID()].emit('endMatch');
+        	//io.sockets.sockets[defendingPlayer.getID()].emit('endMatch');
+            callback(match, io);
         }
 	}, 5000);
     
@@ -161,11 +163,12 @@ export function defendSpell(socket, data, match, io)
 	console.log(player);
 	if(player.getPendingSpells().length > 0)
 	{
-		player.deleteFirstPendingSpell();
+        player.deleteFirstPendingSpell();
+        socket.emit('spell:blocked', { data: "" });
 	}
 }
 
-export function endMatch(socket, match, io)
+export function endMatch(match, io)
 {
 	console.log("end match");
 	match.getPlayers().forEach(element => {

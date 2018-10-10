@@ -44,14 +44,13 @@ class AppServer {
     //error logger
     errorLogging() {
         process.on('uncaughtException', function (err) {
-            console.log("throw log");
+            console.log(err);
             let date = new Date().toISOString().replace(/T.+/, '');
             if (!fs.existsSync('logs/errLog-' + date)) {
                 fs.writeFile('logs/errLog-' + date, err.message + err.stack + "\n\n=================\n\n", function (err) {
                     if (err)
                         throw err;
                     console.log("crashlog created");
-                    process.exit();
                 });
             }
             else {
@@ -59,9 +58,9 @@ class AppServer {
                     if (err)
                         throw err;
                     console.log("crashlog updated");
-                    process.exit();
                 });
             }
+            process.exit();
         });
     }
     sockets() {
@@ -76,6 +75,7 @@ class AppServer {
         var io = this.io;
         var appServer = this;
         this.io.on('connection', function (socket) {
+            console.log("new socket connected");
             ServerMethods.userLogin(socket, activeUsers, io);
             ServerMethods.registerUserForMatchMaking(socket, lfmClients);
             socket.on('player:cast:spell', (data) => {
@@ -106,6 +106,12 @@ class AppServer {
                     let arr = Array.from(matches.values());
                     for (var i = 0; i < arr.length; i++) {
                         if (arr[i].checkForSocketId(socket.id)) {
+                            var match = matches.getValue(matches.keys()[i]);
+                            match.getPlayers().forEach(element => {
+                                if (element.getID() != socket.id) {
+                                    io.sockets.sockets[element.getID()].emit('endMatch', { data: "End Match Data" });
+                                }
+                            });
                             matches.remove(matches.keys()[i]);
                             break;
                         }
